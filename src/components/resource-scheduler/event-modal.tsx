@@ -7,10 +7,11 @@ interface EventModalProps {
   onConfirm: (status: EventStatus) => void;
   onCancel: () => void;
   onDelete?: () => void;
+  resourceNames?: Map<string, string>; // id -> display name
 }
 
 /**
- * modal dialog for creating or editing an event
+ * modal dialog for creating or editing an event (single or multi-row)
  */
 export function EventModal({
   isOpen,
@@ -18,6 +19,7 @@ export function EventModal({
   onConfirm,
   onCancel,
   onDelete,
+  resourceNames,
 }: EventModalProps) {
   const [status, setStatus] = useState<EventStatus>("on");
 
@@ -30,6 +32,15 @@ export function EventModal({
   if (!isOpen || !formData) return null;
 
   const isEditing = formData.existingEventId !== undefined;
+  const isMultiRow = formData.resourceIds && formData.resourceIds.length > 1;
+  const selectedCount = formData.resourceIds?.length || 1;
+
+  /**
+   * get display name for a resource id
+   */
+  const getResourceName = (id: string): string => {
+    return resourceNames?.get(id) || id;
+  };
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -42,6 +53,19 @@ export function EventModal({
             {formData.end.split(" ")[1]}
           </p>
         </div>
+
+        {isMultiRow && formData.resourceIds && (
+          <div className="multi-resource-list">
+            <p className="multi-resource-label">
+              Vybraná zařízení ({selectedCount}):
+            </p>
+            <ul>
+              {formData.resourceIds.map((id) => (
+                <li key={id}>{getResourceName(id)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="modal-field">
           <label>Stav:</label>
@@ -77,7 +101,11 @@ export function EventModal({
             className="btn-confirm"
             onClick={() => onConfirm(status)}
           >
-            {isEditing ? "Uložit" : "Vytvořit"}
+            {isMultiRow
+              ? `Vytvořit ${selectedCount} záznamů`
+              : isEditing
+                ? "Uložit"
+                : "Vytvořit"}
           </button>
         </div>
       </div>

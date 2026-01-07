@@ -116,7 +116,7 @@ function getTodayString(): string {
 }
 
 /**
- * initial sample events
+ * initial sample events for testing
  */
 const todayStr = getTodayString();
 const initialEvents: SchedulerEvent[] = [
@@ -184,7 +184,7 @@ function hasOverlap(
  * main resource scheduler component
  */
 /**
- * state for tracking drag selection time labels
+ * state for tracking drag selection time labels and multi-row selection
  */
 interface DragTimeState {
   startTime: string;
@@ -192,6 +192,11 @@ interface DragTimeState {
   startX: number;
   endX: number;
   top: number;
+  // multi-row support
+  startY: number;
+  endY: number;
+  height: number;
+  coveredResourceIds: string[];
 }
 
 export function ResourceScheduler() {
@@ -201,6 +206,12 @@ export function ResourceScheduler() {
   const [formData, setFormData] = useState<EventFormData | null>(null);
   const [dragTime, setDragTime] = useState<DragTimeState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragTimeRef = useRef<DragTimeState | null>(null);
+
+  // keep ref in sync with state for access in callbacks
+  useEffect(() => {
+    dragTimeRef.current = dragTime;
+  }, [dragTime]);
 
   /**
    * track drag selection and update time labels
@@ -233,6 +244,7 @@ export function ResourceScheduler() {
 
     let isDragging = false;
     let startX = 0;
+    let startY = 0;
     let gridLeft = 0;
     let rowTop = 0;
 
@@ -243,6 +255,31 @@ export function ResourceScheduler() {
       const relativeX = x - gridLeftPos;
       const cellIndex = Math.floor(relativeX / CELL_WIDTH);
       return gridLeftPos + cellIndex * CELL_WIDTH;
+    };
+
+    /**
+     * get resource ids for rows within Y range (excluding group rows)
+     * uses rowheader elements which are in same order as resources array
+     */
+    const getRowsInYRange = (minY: number, maxY: number): string[] => {
+      const rowHeaders = container.querySelectorAll(
+        ".scheduler_cez_theme_rowheader_inner",
+      );
+      const coveredIds: string[] = [];
+
+      rowHeaders.forEach((header, index) => {
+        const headerRect = header.getBoundingClientRect();
+        // check if row overlaps with selection range
+        if (headerRect.bottom > minY && headerRect.top < maxY) {
+          // map index to resource - rowheaders match resources array order
+          const resource = resources[index];
+          if (resource && !resource.isGroup) {
+            coveredIds.push(resource.id);
+          }
+        }
+      });
+
+      return coveredIds;
     };
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -260,10 +297,14 @@ export function ResourceScheduler() {
       isDragging = true;
       // snap start position to cell boundary
       startX = snapToCell(e.clientX, gridRect.left);
+      startY = e.clientY;
       gridLeft = gridRect.left;
       rowTop =
         (e.target as HTMLElement).getBoundingClientRect().top -
         containerRect.top;
+
+      // get initial resource ID using Y position
+      const initialCoveredIds = getRowsInYRange(e.clientY - 1, e.clientY + 1);
 
       const startTime = calculateTimeFromX(startX, gridLeft, false);
       setDragTime({
@@ -272,6 +313,10 @@ export function ResourceScheduler() {
         startX: startX - containerRect.left,
         endX: startX + CELL_WIDTH - containerRect.left,
         top: rowTop,
+        startY: rowTop,
+        endY: rowTop + 35,
+        height: 35,
+        coveredResourceIds: initialCoveredIds,
       });
     };
 
@@ -279,11 +324,12 @@ export function ResourceScheduler() {
       if (!isDragging) return;
 
       const containerRect = container.getBoundingClientRect();
+      const currentY = e.clientY;
 
       // snap current position to cell boundary (end of cell)
       const snappedCurrentX = snapToCell(e.clientX, gridLeft) + CELL_WIDTH;
 
-      // determine which is actually start/end based on drag direction
+      // determine which is actually start/end based on drag direction (X)
       const actualStartX = Math.min(startX, snapToCell(e.clientX, gridLeft));
       const actualEndX = Math.max(startX + CELL_WIDTH, snappedCurrentX);
       const actualStartTime = calculateTimeFromX(actualStartX, gridLeft, false);
@@ -293,12 +339,39 @@ export function ResourceScheduler() {
         true,
       );
 
+      // handle Y direction for multi-row selection
+      const minY = Math.min(startY, currentY);
+      const maxY = Math.max(startY, currentY);
+      const coveredResourceIds = getRowsInYRange(minY, maxY);
+
+      // calculate overlay position based on covered row headers
+      const rowHeaders = container.querySelectorAll(
+        ".scheduler_cez_theme_rowheader_inner",
+      );
+      let overlayTop = rowTop;
+      let overlayBottom = rowTop + 35;
+
+      rowHeaders.forEach((header, index) => {
+        const resource = resources[index];
+        if (resource && coveredResourceIds.includes(resource.id)) {
+          const headerRect = header.getBoundingClientRect();
+          const rowRelativeTop = headerRect.top - containerRect.top;
+          const rowRelativeBottom = headerRect.bottom - containerRect.top;
+          overlayTop = Math.min(overlayTop, rowRelativeTop);
+          overlayBottom = Math.max(overlayBottom, rowRelativeBottom);
+        }
+      });
+
       setDragTime({
         startTime: actualStartTime,
         endTime: actualEndTime,
         startX: actualStartX - containerRect.left,
         endX: actualEndX - containerRect.left,
-        top: rowTop,
+        top: overlayTop,
+        startY: overlayTop,
+        endY: overlayBottom,
+        height: overlayBottom - overlayTop,
+        coveredResourceIds,
       });
     };
 
@@ -320,37 +393,52 @@ export function ResourceScheduler() {
   }, []);
 
   /**
-   * handle drag-to-create: user selects a time range
+   * handle drag-to-create: user selects a time range (single or multi-row)
    */
   const handleTimeRangeSelected = useCallback(
     (args: DayPilot.SchedulerTimeRangeSelectedArgs) => {
       const start = formatDateTime(args.start);
       const end = formatDateTime(args.end);
-      const resourceId = args.resource as string;
+      const singleResourceId = args.resource as string;
 
       // clear the visual selection
       scheduler?.clearSelection();
 
-      // check if this is a group row (budova) - don't allow selection
-      const rowData = resources.find((r) => r.id === resourceId);
-      if (rowData?.isGroup) {
+      // check for multi-row selection from drag state
+      const multiRowIds = dragTimeRef.current?.coveredResourceIds;
+      const resourceIds =
+        multiRowIds && multiRowIds.length > 0
+          ? multiRowIds
+          : [singleResourceId];
+
+      // filter out group rows
+      const validIds = resourceIds.filter((id) => {
+        const rowData = resources.find((r) => r.id === id);
+        return rowData && !rowData.isGroup;
+      });
+
+      if (validIds.length === 0) {
         return;
       }
 
-      // check for conflicts
-      const hasConflict = events.some(
-        (e) =>
-          e.resourceId === resourceId && hasOverlap(start, end, e.start, e.end),
-      );
+      // for single selection, check conflicts upfront
+      if (validIds.length === 1) {
+        const hasConflict = events.some(
+          (e) =>
+            e.resourceId === validIds[0] &&
+            hasOverlap(start, end, e.start, e.end),
+        );
 
-      if (hasConflict) {
-        alert("Cannot create event - overlaps with existing event");
-        return;
+        if (hasConflict) {
+          alert("Cannot create event - overlaps with existing event");
+          return;
+        }
       }
 
-      // open modal to select status
+      // open modal (conflicts for multi-row handled during confirm)
       setFormData({
-        resourceId,
+        resourceId: validIds[0],
+        resourceIds: validIds.length > 1 ? validIds : undefined,
         start,
         end,
         status: "on",
@@ -425,29 +513,56 @@ export function ResourceScheduler() {
       if (!formData) return;
 
       if (formData.existingEventId !== undefined) {
-        // update existing event
+        // update existing event (single only)
         setEvents((prev) =>
           prev.map((e) =>
             e.id === formData.existingEventId ? { ...e, status } : e,
           ),
         );
       } else {
-        // create new event
-        const newEvent: SchedulerEvent = {
-          id: nextEventId++,
-          resourceId: formData.resourceId,
-          start: formData.start,
-          end: formData.end,
-          title: "",
-          status,
-        };
-        setEvents((prev) => [...prev, newEvent]);
+        // create new event(s) - handle single or multi-row
+        const resourceIds = formData.resourceIds || [formData.resourceId];
+        const created: string[] = [];
+        const conflicts: string[] = [];
+
+        for (const resourceId of resourceIds) {
+          const hasConflict = events.some(
+            (e) =>
+              e.resourceId === resourceId &&
+              hasOverlap(formData.start, formData.end, e.start, e.end),
+          );
+
+          if (hasConflict) {
+            conflicts.push(resourceId);
+          } else {
+            const newEvent: SchedulerEvent = {
+              id: nextEventId++,
+              resourceId,
+              start: formData.start,
+              end: formData.end,
+              title: "",
+              status,
+            };
+            setEvents((prev) => [...prev, newEvent]);
+            created.push(resourceId);
+          }
+        }
+
+        // show summary for multi-row with partial conflicts
+        if (conflicts.length > 0 && created.length > 0) {
+          alert(
+            `Vytvořeno ${created.length} záznamů. ${conflicts.length} přeskočeno kvůli konfliktům.`,
+          );
+        } else if (conflicts.length > 0 && created.length === 0) {
+          alert("Nelze vytvořit - všechna zařízení mají konflikty.");
+          return; // don't close modal if all failed
+        }
       }
 
       setModalOpen(false);
       setFormData(null);
     },
-    [formData],
+    [formData, events],
   );
 
   /**
@@ -607,7 +722,7 @@ export function ResourceScheduler() {
               left: dragTime.startX,
               top: dragTime.top,
               width: Math.max(dragTime.endX - dragTime.startX, 2),
-              height: 35,
+              height: Math.max(dragTime.height, 35),
             }}
           />
           {/* floating time labels */}
@@ -667,6 +782,7 @@ export function ResourceScheduler() {
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
         onDelete={handleModalDelete}
+        resourceNames={new Map(resources.map((r) => [r.id, r.name]))}
       />
     </div>
   );

@@ -32,6 +32,7 @@ export interface SchedulerEvent {
  */
 export interface EventFormData {
   resourceId: string;
+  resourceIds?: string[]; // for multi-row selection
   start: string;
   end: string;
   status: EventStatus;
