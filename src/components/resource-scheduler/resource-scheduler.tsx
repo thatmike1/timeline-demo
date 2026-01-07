@@ -632,15 +632,6 @@ export function ResourceScheduler() {
         </button>
       </div>
 
-      <div className="legend">
-        <span className="legend-item">
-          <span className="legend-color status-on"></span> Zapnuto
-        </span>
-        <span className="legend-item">
-          <span className="legend-color status-off"></span> Vypnuto
-        </span>
-      </div>
-
       <DayPilotScheduler
         startDate={startDate}
         days={1}
