@@ -5,6 +5,56 @@ import type { EventStatus, EventFormData, SchedulerEvent } from "./types";
 import "./resource-scheduler.css";
 
 /**
+ * register czech locale for daypilot
+ */
+const czechLocale = new DayPilot.Locale("cs-cz", {
+  dayNames: [
+    "neděle",
+    "pondělí",
+    "úterý",
+    "středa",
+    "čtvrtek",
+    "pátek",
+    "sobota",
+  ],
+  dayNamesShort: ["ne", "po", "út", "st", "čt", "pá", "so"],
+  monthNames: [
+    "leden",
+    "únor",
+    "březen",
+    "duben",
+    "květen",
+    "červen",
+    "červenec",
+    "srpen",
+    "září",
+    "říjen",
+    "listopad",
+    "prosinec",
+  ],
+  monthNamesShort: [
+    "led",
+    "úno",
+    "bře",
+    "dub",
+    "kvě",
+    "čvn",
+    "čvc",
+    "srp",
+    "zář",
+    "říj",
+    "lis",
+    "pro",
+  ],
+  timeFormat: "Clock24Hours",
+  timePattern: "H:mm",
+  datePattern: "d.M.yyyy",
+  dateTimePattern: "d.M.yyyy H:mm",
+  weekStarts: 1, // monday
+});
+DayPilot.Locale.register(czechLocale);
+
+/**
  * map event status to background color
  */
 function getStatusColor(status: EventStatus): string {
@@ -270,16 +320,16 @@ export function ResourceScheduler() {
   return (
     <div className="resource-scheduler">
       <div className="scheduler-header">
-        <h2>Resource Timeline Scheduler</h2>
+        <h2>Plánovač zdrojů</h2>
         <div className="legend">
           <span className="legend-item">
-            <span className="legend-color status-on"></span> On
+            <span className="legend-color status-on"></span> Zapnuto
           </span>
           <span className="legend-item">
-            <span className="legend-color status-off"></span> Off
+            <span className="legend-color status-off"></span> Vypnuto
           </span>
           <span className="legend-item">
-            <span className="legend-color status-empty"></span> Empty
+            <span className="legend-color status-empty"></span> Prázdné
           </span>
         </div>
       </div>
@@ -291,8 +341,10 @@ export function ResourceScheduler() {
         cellDuration={15}
         businessBeginsHour={6}
         businessEndsHour={22}
+        locale="cs-cz"
+        timeFormat="Clock24Hours"
         timeHeaders={[
-          { groupBy: "Day", format: "dddd, MMMM d, yyyy" },
+          { groupBy: "Day", format: "dddd d. MMMM yyyy" },
           { groupBy: "Hour" },
           { groupBy: "Cell", format: "mm" },
         ]}

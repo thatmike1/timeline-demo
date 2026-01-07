@@ -34,38 +34,38 @@ export function EventModal({
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>{isEditing ? "Edit Event" : "Create Event"}</h3>
+        <h3>{isEditing ? "Upravit událost" : "Vytvořit událost"}</h3>
 
         <div className="modal-info">
           <p>
-            <strong>Time:</strong> {formData.start.split(" ")[1]} -{" "}
+            <strong>Čas:</strong> {formData.start.split(" ")[1]} -{" "}
             {formData.end.split(" ")[1]}
           </p>
         </div>
 
         <div className="modal-field">
-          <label>Status:</label>
+          <label>Stav:</label>
           <div className="status-buttons">
             <button
               type="button"
               className={`status-btn status-on ${status === "on" ? "active" : ""}`}
               onClick={() => setStatus("on")}
             >
-              On
+              Zapnuto
             </button>
             <button
               type="button"
               className={`status-btn status-off ${status === "off" ? "active" : ""}`}
               onClick={() => setStatus("off")}
             >
-              Off
+              Vypnuto
             </button>
             <button
               type="button"
               className={`status-btn status-empty ${status === "empty" ? "active" : ""}`}
               onClick={() => setStatus("empty")}
             >
-              Empty
+              Prázdné
             </button>
           </div>
         </div>
@@ -73,18 +73,18 @@ export function EventModal({
         <div className="modal-actions">
           {isEditing && onDelete && (
             <button type="button" className="btn-delete" onClick={onDelete}>
-              Delete
+              Smazat
             </button>
           )}
           <button type="button" className="btn-cancel" onClick={onCancel}>
-            Cancel
+            Zrušit
           </button>
           <button
             type="button"
             className="btn-confirm"
             onClick={() => onConfirm(status)}
           >
-            {isEditing ? "Update" : "Create"}
+            {isEditing ? "Uložit" : "Vytvořit"}
           </button>
         </div>
       </div>
