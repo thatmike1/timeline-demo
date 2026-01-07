@@ -1,0 +1,297 @@
+/**
+ * custom daypilot theme for cez design system
+ * based on colors from /home/thatmike1/git/cez/src/themes/base/palette.ts
+ */
+
+/* cez color variables */
+:root {
+  --cez-primary: #f24f00;
+  --cez-secondary: #1c9c7c;
+  --cez-green-base: #00c752;
+  --cez-green-dark: #008c47;
+  --cez-green-light: #7fdb8f;
+  --cez-red-base: #f24f00;
+  --cez-red-lighter: #ff9c3d;
+  --cez-ink-base: #63666a;
+  --cez-ink-light: #989ea3;
+  --cez-ink-lighter: #dadfe3;
+  --cez-ink-lightest: #eef1f3;
+  --cez-background-default: #eef1f3;
+  --cez-background-paper: #ffffff;
+  --cez-background-table: #f6f9fa;
+  --cez-text-primary: #000000;
+  --cez-text-secondary: #363738;
+}
+
+/* main scheduler container */
+.scheduler_cez_theme {
+  font-family: 'RoobertCEZ', sans-serif;
+  border: 1px solid var(--cez-ink-lighter);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* main scheduler area */
+.scheduler_cez_theme_main {
+  background-color: var(--cez-background-paper);
+}
+
+/* time header container */
+.scheduler_cez_theme_timeheadercol {
+  background-color: var(--cez-ink-lightest);
+  border-bottom: none;
+}
+
+/* time header cells - day level (centered date) */
+.scheduler_cez_theme_timeheadergroup,
+.scheduler_cez_theme_timeheadergroup_inner,
+.scheduler_cez_theme_timeheadercol,
+.scheduler_cez_theme_timeheader_cell,
+.scheduler_cez_theme_timeheadercol_inner,
+.scheduler_cez_theme_timeheader_cell_inner {
+  background-color: var(--cez-ink-lightest);
+  border-right: none;
+  border-bottom: none;
+  color: var(--cez-text-primary);
+  font-weight: 600;
+  font-size: 26px;
+  text-align: center !important;
+}
+
+/* time header cells - hour level (hidden) */
+.scheduler_cez_theme_timeheader {
+  display: none !important;
+}
+
+/* row header (resource names) container */
+.scheduler_cez_theme_rowheadercol {
+  background-color: var(--cez-background-paper);
+}
+
+/* row header cells */
+.scheduler_cez_theme_rowheader {
+  background-color: var(--cez-background-paper);
+  border-right: 1px solid var(--cez-ink-lighter);
+  border-bottom: 1px solid var(--cez-ink-lighter);
+  color: var(--cez-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* row header inner content */
+.scheduler_cez_theme_rowheader_inner {
+  padding: 8px 12px;
+  position: relative;
+}
+
+/* group row (parent) - green background */
+.scheduler_cez_theme_rowheader.scheduler_cez_theme_rowheader_parent {
+  background-color: var(--cez-green-base);
+  color: white;
+  font-weight: 600;
+}
+
+/* grid cells */
+.scheduler_cez_theme_cell {
+  background-color: var(--cez-background-paper);
+  border-right: 1px solid var(--cez-ink-lighter);
+  border-bottom: 1px solid var(--cez-ink-lighter);
+}
+
+/* business hours cells */
+.scheduler_cez_theme_cell_business {
+  background-color: var(--cez-background-paper);
+}
+
+/* non-business hours cells */
+.scheduler_cez_theme_cell_nonbusiness {
+  background-color: var(--cez-background-table);
+}
+
+/* hover effect on cells */
+.scheduler_cez_theme_cell:hover {
+  background-color: rgba(0, 199, 82, 0.08);
+}
+
+/* event bars */
+.scheduler_cez_theme_event {
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  color: white;
+  overflow: visible !important;
+}
+
+/* event inner content */
+.scheduler_cez_theme_event_inner {
+  padding: 4px 8px;
+  border-radius: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* hide native DayPilot selection - we use custom overlay instead */
+.scheduler_cez_theme_selection,
+.scheduler_cez_theme_shadow_inner,
+.scheduler_cez_theme_shadow {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* scrollbar styling */
+.scheduler_cez_theme_scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cez-ink-light) var(--cez-ink-lightest);
+}
+
+.scheduler_cez_theme_scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scheduler_cez_theme_scrollable::-webkit-scrollbar-track {
+  background: var(--cez-ink-lightest);
+}
+
+.scheduler_cez_theme_scrollable::-webkit-scrollbar-thumb {
+  background-color: var(--cez-ink-light);
+  border-radius: 0;
+}
+
+/* corner between row header and time header */
+.scheduler_cez_theme_corner {
+  background-color: var(--cez-ink-lightest);
+  border-right: 1px solid var(--cez-ink-lighter);
+  border-bottom: none;
+}
+
+/* tree expand/collapse icons */
+.scheduler_cez_theme_tree_image_expand,
+.scheduler_cez_theme_tree_image_collapse,
+.scheduler_cez_theme_tree_image_no_children {
+  cursor: pointer;
+}
+
+/* row hover effect */
+.scheduler_cez_theme_matrix tr:hover .scheduler_cez_theme_cell {
+  background-color: rgba(0, 199, 82, 0.05);
+}
+
+/* floating time labels - hidden by default, shown on hover */
+.cez-time-label {
+  font-family: 'RoobertCEZ', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cez-text-secondary);
+  background-color: var(--cez-background-paper);
+  padding: 2px 6px;
+  border-radius: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* show time labels on event hover */
+.scheduler_cez_theme_event:hover .cez-time-label {
+  opacity: 1;
+}
+
+/* add event button */
+.cez-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 0;
+  background-color: var(--cez-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  transition: background-color 0.2s ease;
+}
+
+.cez-add-btn:hover {
+  background-color: #d94500;
+}
+
+/* hide grid cells for parent/group rows */
+.scheduler_cez_theme_matrix tr[data-parent='true'] td {
+  background-color: var(--cez-background-paper) !important;
+  border-right-color: transparent !important;
+}
+
+/* parent row cells - styled via onBeforeCellRender */
+.parent-row-cell,
+.scheduler_cez_theme_cell.parent-row-cell {
+  background-color: var(--cez-ink-lightest) !important;
+  border-right: 1px solid transparent !important;
+  border-bottom: 1px solid var(--cez-ink-lighter) !important;
+  pointer-events: none;
+}
+
+/* divider line styles - hide horizontal divider between header and content */
+.scheduler_cez_theme_divider,
+.scheduler_cez_theme_divider_horizontal {
+  display: none !important;
+}
+
+/* remove any borders between header and content */
+.scheduler_cez_theme_rowheader:first-child,
+.scheduler_cez_theme_cell:first-child {
+  border-top: none !important;
+}
+
+/* hide all horizontal dividers and separators */
+.scheduler_cez_theme div[style*='border-bottom'],
+.scheduler_cez_theme div[style*='border-top'] {
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* target the header row container */
+.scheduler_cez_theme_timeheader_row {
+  border-bottom: none !important;
+}
+
+/* ensure no bottom border on time header area */
+.scheduler_cez_theme_timeheadergroup {
+  border-bottom: none !important;
+}
+
+/* target scrollable area - align with row headers */
+.scheduler_cez_theme_scrollable {
+  border-top: none !important;
+  margin-top: -1px !important;
+}
+
+/* hide 1px spacer divs - DayPilot internal separators */
+.scheduler_cez_theme_main > div > div:empty,
+.scheduler_cez_theme_main div[style*='height: 1px'],
+.scheduler_cez_theme_main div[style*='height:1px'] {
+  display: none !important;
+}
+
+/* matrix container - force no gap between header and content */
+.scheduler_cez_theme_matrix {
+  background-color: var(--cez-background-paper);
+  margin-top: -1px !important;
+}
+
+/* splitter between row header and main area */
+.scheduler_cez_theme_splitter {
+  background-color: var(--cez-ink-lighter);
+  width: 1px;
+}
+
+/* row header padding for child rows */
+.scheduler_cez_theme_rowheader_padding {
+  background-color: var(--cez-background-paper);
+}
