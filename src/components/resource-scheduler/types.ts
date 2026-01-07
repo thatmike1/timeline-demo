@@ -1,7 +1,7 @@
 /**
  * status of a scheduled event block
  */
-export type EventStatus = "on" | "off" | "empty";
+export type EventStatus = "on" | "off";
 
 /**
  * resource in the scheduler (building or asset)

@@ -119,17 +119,21 @@
   font-size: 12px;
   font-weight: 500;
   border: none;
-  color: white;
   overflow: visible !important;
+  /* make the outer event transparent */
+  background: transparent !important;
 }
 
-/* event inner content */
+/* event inner content - this shows the actual colored bar with padding */
 .scheduler_cez_theme_event_inner {
-  padding: 4px 8px;
+  padding: 0;
   border-radius: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* create visual padding by using margin */
+  margin: 5px 0;
+  height: calc(100% - 10px);
 }
 
 /* hide native DayPilot selection - we use custom overlay instead */

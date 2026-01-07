@@ -72,14 +72,13 @@ const CEZ_COLORS = {
 
 /**
  * map event status to background color using cez palette
+ * orange = on, gray = off
  */
 function getStatusColor(status: EventStatus): string {
   switch (status) {
     case "on":
-      return CEZ_COLORS.green;
+      return CEZ_COLORS.primary; // orange
     case "off":
-      return CEZ_COLORS.red;
-    case "empty":
       return CEZ_COLORS.gray;
     default:
       return CEZ_COLORS.inkBase;
@@ -106,23 +105,35 @@ const resources: ResourceItem[] = [
 ];
 
 /**
+ * get today's date as YYYY-MM-DD string
+ */
+function getTodayString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * initial sample events
  */
+const todayStr = getTodayString();
 const initialEvents: SchedulerEvent[] = [
   {
     id: 1,
     resourceId: "a1.1",
-    start: "2025-01-07 08:15",
-    end: "2025-01-07 13:30",
-    title: "On",
+    start: `${todayStr} 08:15`,
+    end: `${todayStr} 13:30`,
+    title: "",
     status: "on",
   },
   {
     id: 2,
     resourceId: "a2.1",
-    start: "2025-01-07 10:00",
-    end: "2025-01-07 12:00",
-    title: "Off",
+    start: `${todayStr} 10:00`,
+    end: `${todayStr} 12:00`,
+    title: "",
     status: "off",
   },
 ];
@@ -139,11 +150,12 @@ function formatDateTime(date: DayPilot.Date | string): string {
 
 /**
  * convert our events to daypilot format
+ * no text shown - color indicates status
  */
 function toDayPilotEvents(events: SchedulerEvent[]): DayPilot.EventData[] {
   return events.map((e) => ({
     id: e.id,
-    text: e.title,
+    text: "",
     start: e.start.replace(" ", "T") + ":00",
     end: e.end.replace(" ", "T") + ":00",
     resource: e.resourceId,
@@ -412,13 +424,11 @@ export function ResourceScheduler() {
     (status: EventStatus) => {
       if (!formData) return;
 
-      const title = status.charAt(0).toUpperCase() + status.slice(1);
-
       if (formData.existingEventId !== undefined) {
         // update existing event
         setEvents((prev) =>
           prev.map((e) =>
-            e.id === formData.existingEventId ? { ...e, status, title } : e,
+            e.id === formData.existingEventId ? { ...e, status } : e,
           ),
         );
       } else {
@@ -428,7 +438,7 @@ export function ResourceScheduler() {
           resourceId: formData.resourceId,
           start: formData.start,
           end: formData.end,
-          title,
+          title: "",
           status,
         };
         setEvents((prev) => [...prev, newEvent]);
@@ -629,9 +639,6 @@ export function ResourceScheduler() {
         <span className="legend-item">
           <span className="legend-color status-off"></span> Vypnuto
         </span>
-        <span className="legend-item">
-          <span className="legend-color status-empty"></span> Prázdné
-        </span>
       </div>
 
       <DayPilotScheduler
@@ -641,6 +648,7 @@ export function ResourceScheduler() {
         cellDuration={15}
         cellWidth={15}
         rowHeaderWidth={180}
+        eventHeight={36}
         businessBeginsHour={0}
         businessEndsHour={24}
         locale="cs-cz"

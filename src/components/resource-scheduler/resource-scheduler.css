@@ -97,14 +97,10 @@
 }
 
 .legend-color.status-on {
-  background-color: var(--cez-green-base);
+  background-color: var(--cez-primary);
 }
 
 .legend-color.status-off {
-  background-color: var(--cez-red-base);
-}
-
-.legend-color.status-empty {
   background-color: var(--cez-ink-light);
 }
 
@@ -192,45 +188,30 @@
 }
 
 .status-btn.status-on {
-  color: var(--cez-green-base);
+  color: var(--cez-primary);
 }
 
 .status-btn.status-on:hover {
-  background-color: rgba(0, 199, 82, 0.08);
-  border-color: var(--cez-green-base);
+  background-color: rgba(242, 79, 0, 0.08);
+  border-color: var(--cez-primary);
 }
 
 .status-btn.status-on.active {
-  background-color: var(--cez-green-base);
-  border-color: var(--cez-green-base);
+  background-color: var(--cez-primary);
+  border-color: var(--cez-primary);
   color: white;
 }
 
 .status-btn.status-off {
-  color: var(--cez-red-base);
-}
-
-.status-btn.status-off:hover {
-  background-color: rgba(242, 79, 0, 0.08);
-  border-color: var(--cez-red-base);
-}
-
-.status-btn.status-off.active {
-  background-color: var(--cez-red-base);
-  border-color: var(--cez-red-base);
-  color: white;
-}
-
-.status-btn.status-empty {
   color: var(--cez-ink-light);
 }
 
-.status-btn.status-empty:hover {
+.status-btn.status-off:hover {
   background-color: rgba(152, 158, 163, 0.08);
   border-color: var(--cez-ink-light);
 }
 
-.status-btn.status-empty.active {
+.status-btn.status-off.active {
   background-color: var(--cez-ink-light);
   border-color: var(--cez-ink-light);
   color: white;

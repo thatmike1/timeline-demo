@@ -60,13 +60,6 @@ export function EventModal({
             >
               Vypnuto
             </button>
-            <button
-              type="button"
-              className={`status-btn status-empty ${status === "empty" ? "active" : ""}`}
-              onClick={() => setStatus("empty")}
-            >
-              Prázdné
-            </button>
           </div>
         </div>
 
