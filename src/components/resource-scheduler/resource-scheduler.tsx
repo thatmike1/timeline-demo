@@ -197,6 +197,10 @@ interface DragTimeState {
   endY: number;
   height: number;
   coveredResourceIds: string[];
+  // resize mode indicator
+  isResizing?: boolean;
+  resizeEventId?: number;
+  resizeResourceId?: string;
 }
 
 export function ResourceScheduler() {
@@ -207,14 +211,57 @@ export function ResourceScheduler() {
   const [dragTime, setDragTime] = useState<DragTimeState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragTimeRef = useRef<DragTimeState | null>(null);
+  const eventsRef = useRef<SchedulerEvent[]>(events);
 
-  // keep ref in sync with state for access in callbacks
+  // keep refs in sync with state for access in callbacks
   useEffect(() => {
     dragTimeRef.current = dragTime;
   }, [dragTime]);
 
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
   /**
-   * track drag selection and update time labels
+   * ref for resize completion handler - allows useEffect to call latest version
+   */
+  const resizeCompleteRef = useRef<
+    ((eventId: number, newStart: string, newEnd: string) => void) | null
+  >(null);
+
+  // update resize handler ref when events change
+  useEffect(() => {
+    resizeCompleteRef.current = (
+      eventId: number,
+      newStart: string,
+      newEnd: string,
+    ) => {
+      const event = events.find((e) => e.id === eventId);
+      if (!event) return;
+
+      // check for conflicts
+      const hasConflict = events.some(
+        (e) =>
+          e.id !== eventId &&
+          e.resourceId === event.resourceId &&
+          hasOverlap(newStart, newEnd, e.start, e.end),
+      );
+
+      if (hasConflict) {
+        alert("Nelze změnit velikost - překrývá se s existující událostí");
+        return;
+      }
+
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId ? { ...e, start: newStart, end: newEnd } : e,
+        ),
+      );
+    };
+  }, [events]);
+
+  /**
+   * track drag selection and resize operations, update time labels
    */
   useEffect(() => {
     const container = containerRef.current;
@@ -242,11 +289,20 @@ export function ResourceScheduler() {
       return `${hours}:${minutes.toString().padStart(2, "0")}`;
     };
 
+    // selection state
     let isDragging = false;
     let startX = 0;
     let startY = 0;
     let gridLeft = 0;
     let rowTop = 0;
+
+    // resize tracking state
+    let isResizing = false;
+    let resizeEdge: "left" | "right" | null = null;
+    let resizeEventLeft = 0;
+    let resizeEventRight = 0;
+    let resizeRowTop = 0;
+    const RESIZE_EDGE_WIDTH = 10;
 
     /**
      * snap x position to cell boundary
@@ -283,22 +339,128 @@ export function ResourceScheduler() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      // check if clicking on a grid cell (not header or row header)
       const target = e.target as HTMLElement;
-      const cell = target.closest(".scheduler_cez_theme_cell");
-      if (!cell) return;
-
+      const containerRect = container.getBoundingClientRect();
       const grid = container.querySelector(".scheduler_cez_theme_matrix");
       if (!grid) return;
-
       const gridRect = grid.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
+      gridLeft = gridRect.left;
+
+      // check if clicking on an event (for resize tracking)
+      const eventElement = target.closest(
+        ".scheduler_cez_theme_event_inner",
+      ) as HTMLElement | null;
+      if (eventElement) {
+        const eventRect = eventElement.getBoundingClientRect();
+        const clickX = e.clientX;
+
+        // find event by matching position - calculate time from X position
+        const eventStartTime = calculateTimeFromX(
+          eventRect.left,
+          gridLeft,
+          false,
+        );
+        const eventEndTime = calculateTimeFromX(
+          eventRect.right - CELL_WIDTH,
+          gridLeft,
+          true,
+        );
+
+        // find matching event by time (format: "H:mm")
+        const matchingEvent = eventsRef.current.find((ev) => {
+          const evStartTime = ev.start.split(" ")[1]; // "YYYY-MM-DD HH:mm" -> "HH:mm"
+          const evEndTime = ev.end.split(" ")[1];
+          // normalize format (remove leading zeros for comparison)
+          const normalize = (t: string) => {
+            const [h, m] = t.split(":");
+            return `${parseInt(h)}:${m}`;
+          };
+          return (
+            normalize(evStartTime) === eventStartTime &&
+            normalize(evEndTime) === eventEndTime
+          );
+        });
+
+        const eventId = matchingEvent?.id ?? null;
+        const resourceId = matchingEvent?.resourceId || null;
+
+        // detect if near left or right edge
+        const distFromLeft = clickX - eventRect.left;
+        const distFromRight = eventRect.right - clickX;
+
+        if (distFromLeft <= RESIZE_EDGE_WIDTH && eventId !== null) {
+          // track resize from left edge - stop propagation to prevent time range selection
+          e.stopPropagation();
+          isResizing = true;
+          resizeEdge = "left";
+          resizeEventLeft = eventRect.left;
+          resizeEventRight = eventRect.right;
+          resizeRowTop = eventRect.top - containerRect.top;
+
+          const startTime = calculateTimeFromX(eventRect.left, gridLeft, false);
+          const endTime = calculateTimeFromX(
+            eventRect.right - CELL_WIDTH,
+            gridLeft,
+            true,
+          );
+
+          setDragTime({
+            startTime,
+            endTime,
+            startX: eventRect.left - containerRect.left,
+            endX: eventRect.right - containerRect.left,
+            top: resizeRowTop,
+            startY: resizeRowTop,
+            endY: resizeRowTop + eventRect.height,
+            height: eventRect.height,
+            coveredResourceIds: [],
+            isResizing: true,
+            resizeEventId: eventId,
+            resizeResourceId: resourceId || undefined,
+          });
+        } else if (distFromRight <= RESIZE_EDGE_WIDTH && eventId !== null) {
+          // track resize from right edge - stop propagation to prevent time range selection
+          e.stopPropagation();
+          isResizing = true;
+          resizeEdge = "right";
+          resizeEventLeft = eventRect.left;
+          resizeEventRight = eventRect.right;
+          resizeRowTop = eventRect.top - containerRect.top;
+
+          const startTime = calculateTimeFromX(eventRect.left, gridLeft, false);
+          const endTime = calculateTimeFromX(
+            eventRect.right - CELL_WIDTH,
+            gridLeft,
+            true,
+          );
+
+          setDragTime({
+            startTime,
+            endTime,
+            startX: eventRect.left - containerRect.left,
+            endX: eventRect.right - containerRect.left,
+            top: resizeRowTop,
+            startY: resizeRowTop,
+            endY: resizeRowTop + eventRect.height,
+            height: eventRect.height,
+            coveredResourceIds: [],
+            isResizing: true,
+            resizeEventId: eventId,
+            resizeResourceId: resourceId || undefined,
+          });
+        }
+        // don't return - let DayPilot handle the actual resize
+        return;
+      }
+
+      // check if clicking on a grid cell (for selection/creation)
+      const cell = target.closest(".scheduler_cez_theme_cell");
+      if (!cell) return;
 
       isDragging = true;
       // snap start position to cell boundary
       startX = snapToCell(e.clientX, gridRect.left);
       startY = e.clientY;
-      gridLeft = gridRect.left;
       rowTop =
         (e.target as HTMLElement).getBoundingClientRect().top -
         containerRect.top;
@@ -321,9 +483,56 @@ export function ResourceScheduler() {
     };
 
     const handleMouseMove = (e: MouseEvent) => {
+      const containerRect = container.getBoundingClientRect();
+
+      // handle resize tracking
+      if (isResizing && resizeEdge) {
+        const snappedX = snapToCell(e.clientX, gridLeft);
+
+        let newLeft = resizeEventLeft;
+        let newRight = resizeEventRight;
+
+        if (resizeEdge === "left") {
+          newLeft = snappedX;
+          if (newLeft >= resizeEventRight - CELL_WIDTH) {
+            newLeft = resizeEventRight - CELL_WIDTH;
+          }
+        } else {
+          newRight = snappedX + CELL_WIDTH;
+          if (newRight <= resizeEventLeft + CELL_WIDTH) {
+            newRight = resizeEventLeft + CELL_WIDTH;
+          }
+        }
+
+        const startTime = calculateTimeFromX(newLeft, gridLeft, false);
+        const endTime = calculateTimeFromX(
+          newRight - CELL_WIDTH,
+          gridLeft,
+          true,
+        );
+
+        // preserve event ID from initial mousedown
+        const currentDragTime = dragTimeRef.current;
+        setDragTime({
+          startTime,
+          endTime,
+          startX: newLeft - containerRect.left,
+          endX: newRight - containerRect.left,
+          top: resizeRowTop,
+          startY: resizeRowTop,
+          endY: resizeRowTop + 36,
+          height: 36,
+          coveredResourceIds: [],
+          isResizing: true,
+          resizeEventId: currentDragTime?.resizeEventId,
+          resizeResourceId: currentDragTime?.resizeResourceId,
+        });
+        return;
+      }
+
+      // handle selection drag
       if (!isDragging) return;
 
-      const containerRect = container.getBoundingClientRect();
       const currentY = e.clientY;
 
       // snap current position to cell boundary (end of cell)
@@ -376,17 +585,37 @@ export function ResourceScheduler() {
     };
 
     const handleMouseUp = () => {
+      // check if we were resizing and need to update the event
+      if (isResizing && dragTimeRef.current?.isResizing) {
+        const dt = dragTimeRef.current;
+        if (dt.resizeEventId !== undefined && resizeCompleteRef.current) {
+          // convert time strings to full datetime format with leading zeros
+          const todayStr = getTodayString();
+          // ensure time has leading zeros (8:15 -> 08:15)
+          const padTime = (t: string) => {
+            const [h, m] = t.split(":");
+            return `${h.padStart(2, "0")}:${m}`;
+          };
+          const newStart = `${todayStr} ${padTime(dt.startTime)}`;
+          const newEnd = `${todayStr} ${padTime(dt.endTime)}`;
+          resizeCompleteRef.current(dt.resizeEventId, newStart, newEnd);
+        }
+      }
+
       isDragging = false;
-      // small delay to let the selection complete before hiding labels
+      isResizing = false;
+      resizeEdge = null;
+      // small delay to let the operation complete before hiding labels
       setTimeout(() => setDragTime(null), 100);
     };
 
-    container.addEventListener("mousedown", handleMouseDown);
+    // use capturing phase for mousedown to intercept before DayPilot stops propagation
+    container.addEventListener("mousedown", handleMouseDown, true);
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      container.removeEventListener("mousedown", handleMouseDown);
+      container.removeEventListener("mousedown", handleMouseDown, true);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
@@ -499,6 +728,39 @@ export function ResourceScheduler() {
           e.id === eventId
             ? { ...e, start: newStart, end: newEnd, resourceId: newResource }
             : e,
+        ),
+      );
+    },
+    [events, scheduler],
+  );
+
+  /**
+   * handle event resize (drag edge of existing event)
+   */
+  const handleEventResized = useCallback(
+    (args: DayPilot.SchedulerEventResizedArgs) => {
+      const eventId = Number(args.e.id());
+      const newStart = formatDateTime(args.newStart);
+      const newEnd = formatDateTime(args.newEnd);
+      const resourceId = args.e.resource() as string;
+
+      // check for conflicts (excluding the resized event itself)
+      const hasConflict = events.some(
+        (e) =>
+          e.id !== eventId &&
+          e.resourceId === resourceId &&
+          hasOverlap(newStart, newEnd, e.start, e.end),
+      );
+
+      if (hasConflict) {
+        alert("Nelze změnit velikost - překrývá se s existující událostí");
+        scheduler?.update();
+        return;
+      }
+
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId ? { ...e, start: newStart, end: newEnd } : e,
         ),
       );
     },
@@ -768,7 +1030,8 @@ export function ResourceScheduler() {
         onEventClick={handleEventClick}
         eventMoveHandling="Update"
         onEventMoved={handleEventMoved}
-        eventResizeHandling="Disabled"
+        eventResizeHandling="Update"
+        onEventResized={handleEventResized}
         onBeforeRowHeaderRender={handleBeforeRowHeaderRender}
         onBeforeEventRender={handleBeforeEventRender}
         onBeforeCellRender={handleBeforeCellRender}
