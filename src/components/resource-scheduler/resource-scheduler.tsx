@@ -302,6 +302,7 @@ export function ResourceScheduler() {
     let resizeEventLeft = 0;
     let resizeEventRight = 0;
     let resizeRowTop = 0;
+    let resizeRowHeight = 35;
     const RESIZE_EDGE_WIDTH = 10;
 
     /**
@@ -384,6 +385,23 @@ export function ResourceScheduler() {
         const eventId = matchingEvent?.id ?? null;
         const resourceId = matchingEvent?.resourceId || null;
 
+        // find full row height from grid cell (not event height which is centered)
+        // use cell position to match creation overlay positioning
+        let rowFullTop = eventRect.top - containerRect.top;
+        let rowFullHeight = eventRect.height;
+
+        // find a cell at the same Y level as the event to get accurate row position
+        const cells = container.querySelectorAll(".scheduler_cez_theme_cell");
+        const eventCenterY = eventRect.top + eventRect.height / 2;
+        for (const cell of cells) {
+          const cellRect = cell.getBoundingClientRect();
+          if (cellRect.top <= eventCenterY && cellRect.bottom >= eventCenterY) {
+            rowFullTop = cellRect.top - containerRect.top;
+            rowFullHeight = cellRect.height;
+            break;
+          }
+        }
+
         // detect if near left or right edge
         const distFromLeft = clickX - eventRect.left;
         const distFromRight = eventRect.right - clickX;
@@ -395,7 +413,8 @@ export function ResourceScheduler() {
           resizeEdge = "left";
           resizeEventLeft = eventRect.left;
           resizeEventRight = eventRect.right;
-          resizeRowTop = eventRect.top - containerRect.top;
+          resizeRowTop = rowFullTop;
+          resizeRowHeight = rowFullHeight;
 
           const startTime = calculateTimeFromX(eventRect.left, gridLeft, false);
           const endTime = calculateTimeFromX(
@@ -409,10 +428,10 @@ export function ResourceScheduler() {
             endTime,
             startX: eventRect.left - containerRect.left,
             endX: eventRect.right - containerRect.left,
-            top: resizeRowTop,
-            startY: resizeRowTop,
-            endY: resizeRowTop + eventRect.height,
-            height: eventRect.height,
+            top: rowFullTop,
+            startY: rowFullTop,
+            endY: rowFullTop + rowFullHeight,
+            height: rowFullHeight,
             coveredResourceIds: [],
             isResizing: true,
             resizeEventId: eventId,
@@ -425,7 +444,8 @@ export function ResourceScheduler() {
           resizeEdge = "right";
           resizeEventLeft = eventRect.left;
           resizeEventRight = eventRect.right;
-          resizeRowTop = eventRect.top - containerRect.top;
+          resizeRowTop = rowFullTop;
+          resizeRowHeight = rowFullHeight;
 
           const startTime = calculateTimeFromX(eventRect.left, gridLeft, false);
           const endTime = calculateTimeFromX(
@@ -439,10 +459,10 @@ export function ResourceScheduler() {
             endTime,
             startX: eventRect.left - containerRect.left,
             endX: eventRect.right - containerRect.left,
-            top: resizeRowTop,
-            startY: resizeRowTop,
-            endY: resizeRowTop + eventRect.height,
-            height: eventRect.height,
+            top: rowFullTop,
+            startY: rowFullTop,
+            endY: rowFullTop + rowFullHeight,
+            height: rowFullHeight,
             coveredResourceIds: [],
             isResizing: true,
             resizeEventId: eventId,
@@ -520,8 +540,8 @@ export function ResourceScheduler() {
           endX: newRight - containerRect.left,
           top: resizeRowTop,
           startY: resizeRowTop,
-          endY: resizeRowTop + 36,
-          height: 36,
+          endY: resizeRowTop + resizeRowHeight,
+          height: resizeRowHeight,
           coveredResourceIds: [],
           isResizing: true,
           resizeEventId: currentDragTime?.resizeEventId,
