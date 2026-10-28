@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { EventStatus, EventFormData } from "./types";
 
 interface EventModalProps {
@@ -13,23 +13,21 @@ interface EventModalProps {
 /**
  * modal dialog for creating or editing an event (single or multi-row)
  */
-export function EventModal({
-  isOpen,
+export function EventModal({ isOpen, formData, ...props }: EventModalProps) {
+  if (!isOpen || !formData) return null;
+
+  return <EventModalForm key={JSON.stringify(formData)} formData={formData} {...props} />;
+}
+
+/** owns the draft status for one open event form */
+function EventModalForm({
   formData,
   onConfirm,
   onCancel,
   onDelete,
   resourceNames,
-}: EventModalProps) {
-  const [status, setStatus] = useState<EventStatus>("on");
-
-  useEffect(() => {
-    if (formData) {
-      setStatus(formData.status);
-    }
-  }, [formData]);
-
-  if (!isOpen || !formData) return null;
+}: Omit<EventModalProps, "isOpen" | "formData"> & { formData: EventFormData }) {
+  const [status, setStatus] = useState<EventStatus>(formData.status);
 
   const isEditing = formData.existingEventId !== undefined;
   const isMultiRow = formData.resourceIds && formData.resourceIds.length > 1;
